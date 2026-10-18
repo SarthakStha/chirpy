@@ -13,8 +13,12 @@ func main() {
 
 	mux := http.NewServeMux()
 	fileServer := http.FileServer(http.Dir(rootPath))
-	mux.Handle("/app/", http.StripPrefix("/app", fileServer))
-	mux.HandleFunc("/healthz", handlerHealthz)
+	metricState := &apiConfig{}
+
+	mux.Handle("/app/", metricState.middlewareMetricInc(http.StripPrefix("/app", fileServer)))
+	mux.HandleFunc("/healthz", handlerReadiness)
+	mux.HandleFunc("/metrics", metricState.handlerMetrics)
+	mux.HandleFunc("/reset", metricState.handlerReset)
 
 	server := &http.Server{
 		Addr:           ":" + port,

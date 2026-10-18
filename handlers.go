@@ -5,10 +5,10 @@ import (
 	"net/http"
 )
 
-func handlerHealthz(resp http.ResponseWriter, req *http.Request) {
-	resp.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	resp.WriteHeader(200)
-	if _, err := resp.Write([]byte("OK")); err != nil {
-		log.Fatal(err)
+func handlerReadiness(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(200)
+	if _, err := w.Write([]byte("OK\n")); err != nil {
+		log.Printf("error writing response: %s", err)
 	}
 }
