@@ -9,8 +9,12 @@ import (
 
 func main() {
 	const port = "8080"
-	// Currently has no routes
+	const rootPath = "."
+
 	mux := http.NewServeMux()
+	fileServer := http.FileServer(http.Dir(rootPath))
+	mux.Handle("/app/", http.StripPrefix("/app", fileServer))
+	mux.HandleFunc("/healthz", handlerHealthz)
 
 	server := &http.Server{
 		Addr:           ":" + port,
