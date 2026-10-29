@@ -16,9 +16,12 @@ func main() {
 	metricState := &apiConfig{}
 
 	mux.Handle("/app/", metricState.middlewareMetricInc(http.StripPrefix("/app", fileServer)))
-	mux.HandleFunc("/healthz", handlerReadiness)
-	mux.HandleFunc("/metrics", metricState.handlerMetrics)
-	mux.HandleFunc("/reset", metricState.handlerReset)
+
+	mux.HandleFunc("GET /api/healthz", handlerReadiness)
+	mux.HandleFunc("POST /api/validate_chirp", handlerValidate)
+
+	mux.HandleFunc("GET /admin/metrics", metricState.handlerMetrics)
+	mux.HandleFunc("POST /admin/reset", metricState.handlerReset)
 
 	server := &http.Server{
 		Addr:           ":" + port,
