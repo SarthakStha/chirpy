@@ -9,7 +9,7 @@ import (
 
 func handlerReadiness(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write([]byte("OK\n")); err != nil {
 		log.Printf("error writing response: %s", err)
 	}
@@ -27,12 +27,12 @@ func handlerValidate(w http.ResponseWriter, r *http.Request) {
 	param := requestBody{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&param); err != nil {
-		respondWithError(w, 400, "Could not decode request body", err)
+		respondWithError(w, http.StatusBadRequest, "Could not decode request body", err)
 		return
 	}
 
 	if len(param.Body) > 140 {
-		respondWithError(w, 400, "Chirp is too long", nil)
+		respondWithError(w, http.StatusBadRequest, "Chirp is too long", nil)
 		return
 	}
 
@@ -49,5 +49,5 @@ func handlerValidate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	respondWithJSON(w, 200, responseBody{CleanedBody: strings.Join(words, " ")})
+	respondWithJSON(w, http.StatusOK, responseBody{CleanedBody: strings.Join(words, " ")})
 }
