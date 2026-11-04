@@ -10,20 +10,19 @@ import (
 	"time"
 )
 
+type Chirp struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+}
+
 func (cfg *apiConfig) handlerNewChirp(w http.ResponseWriter, r *http.Request) {
 	// probably better to use a anonymous struct here
 	type requestBody struct {
 		Body   string    `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
-	}
-
-	// can be moved to higher scope if req by other functions
-	type responseChirp struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Body      string    `json:"body"`
-		UserID    uuid.UUID `json:"user_id"`
 	}
 
 	param := requestBody{}
@@ -48,7 +47,7 @@ func (cfg *apiConfig) handlerNewChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseJSON := responseChirp{
+	responseJSON := Chirp{
 		ID:        chirp.ID,
 		CreatedAt: chirp.CreatedAt,
 		UpdatedAt: chirp.UpdatedAt,
@@ -81,4 +80,25 @@ func cleanChirp(body string, profaneWords map[string]struct{}) string {
 	}
 	cleanedBody := strings.Join(words, " ")
 	return cleanedBody
+}
+
+func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request) {
+	allChirps, err := cfg.db.GetAllChirps(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to get chirps", err)
+		return
+	}
+
+	responseChirps := make([]Chirp, len(allChirps))
+	for i, chirp := range allChirps {
+		responseChirps[i] = Chirp{
+			ID:        chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+			UserID:    chirp.UserID,
+		}
+	}
+
+	respondWithJSON(w, http.StatusOK, responseChirps)
 }

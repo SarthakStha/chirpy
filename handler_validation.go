@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 )
 
 func handlerReadiness(w http.ResponseWriter, r *http.Request) {
