@@ -8,17 +8,17 @@ import (
 )
 
 func (cfg *apiConfig) handlerNewUser(w http.ResponseWriter, r *http.Request) {
-	userEmail := struct {
+	params := struct {
 		Email string `json:"email"`
 	}{}
 
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&userEmail); err != nil {
+	if err := decoder.Decode(&params); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Could not decode request body", err)
 		return
 	}
 
-	user, err := cfg.db.CreateUser(r.Context(), userEmail.Email)
+	user, err := cfg.db.CreateUser(r.Context(), params.Email)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Unable to create user", err)
 		return

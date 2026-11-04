@@ -20,7 +20,7 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("error loading .env file: ", err)
 	}
-	
+
 	// Checking if the env variables have values
 	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
@@ -49,12 +49,12 @@ func main() {
 	mux.Handle("/app/", cfg.middlewareMetricInc(http.StripPrefix("/app", fileServer)))
 
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
-	mux.HandleFunc("POST /api/validate_chirp", handlerValidate)
 
 	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", cfg.handlerReset)
 
 	mux.HandleFunc("POST /api/users", cfg.handlerNewUser)
+	mux.HandleFunc("POST /api/chirps", cfg.handlerNewChirp)
 
 	server := &http.Server{
 		Addr:           ":" + port,
