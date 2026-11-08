@@ -25,21 +25,21 @@ func (cfg *apiConfig) handlerNewChirp(w http.ResponseWriter, r *http.Request) {
 		UserID uuid.UUID `json:"user_id"`
 	}
 
-	param := requestBody{}
+	requestParams := requestBody{}
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&param); err != nil {
+	if err := decoder.Decode(&requestParams); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Could not decode request body", err)
 		return
 	}
 
-	cleanedChirp, err := validateChirp(param.Body)
+	cleanedChirp, err := validateChirp(requestParams.Body)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error(), err)
 	}
 
 	chirpArgs := database.CreateChirpParams{
 		Body:   cleanedChirp,
-		UserID: param.UserID,
+		UserID: requestParams.UserID,
 	}
 	chirp, err := cfg.db.CreateChirp(r.Context(), chirpArgs)
 	if err != nil {
@@ -117,12 +117,12 @@ func (cfg *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseChirp := Chirp {
-		ID: chirp.ID,
+	responseChirp := Chirp{
+		ID:        chirp.ID,
 		CreatedAt: chirp.CreatedAt,
 		UpdatedAt: chirp.UpdatedAt,
-		Body: chirp.Body,
-		UserID: chirp.UserID,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
 	}
 	respondWithJSON(w, http.StatusOK, responseChirp)
 }
