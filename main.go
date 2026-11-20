@@ -32,6 +32,11 @@ func main() {
 		log.Fatal("platform must be set")
 	}
 
+	tokenSecret := os.Getenv("TOKEN_SECRET")
+	if tokenSecret == "" {
+		log.Fatal("token secret must be set")
+	}
+
 	// Connecting to the database
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -44,6 +49,7 @@ func main() {
 	cfg := &apiConfig{
 		db:       dbQueries,
 		platform: platform,
+		secret:   tokenSecret,
 	}
 
 	mux.Handle("/app/", cfg.middlewareMetricInc(http.StripPrefix("/app", fileServer)))

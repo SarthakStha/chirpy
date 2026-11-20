@@ -2,6 +2,8 @@ package auth
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -63,4 +65,21 @@ func parseToken(tokenString, tokenSecret string) (*jwt.Token, error) {
 			return []byte(tokenSecret), nil
 		},
 	)
+}
+
+// Typical Header structure Authorization: <scheme> <credentials>
+// Assuming only one white space between scheme and credentials
+// Currently only supporting scheme 'Bearer'
+func GetBearerToken(header http.Header) (string, error) {
+	authHeader := header.Get("Authorization")
+	if authHeader == "" {
+		return "", fmt.Errorf("unable to get Token, 'Authorization' header not set")
+	}
+
+	tokenPrefix := "Bearer "
+	token, found := strings.CutPrefix(authHeader, tokenPrefix)
+	if !found {
+		return "", fmt.Errorf("invalid 'Authorization' header, missing/misformatted scheme prefix")
+	}
+	return token, nil
 }

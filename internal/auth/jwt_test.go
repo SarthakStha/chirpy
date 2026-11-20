@@ -3,6 +3,7 @@ package auth
 import (
 	"github.com/google/uuid"
 	"log"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -51,34 +52,34 @@ func TestInvalidJWT(t *testing.T) {
 	trueSecret := "chirpy"
 
 	type TestCase struct {
-		testName string
-		actualID uuid.UUID
-		falseID  uuid.UUID
-		actualSecret   string
-		falseSecret   string
+		testName     string
+		actualID     uuid.UUID
+		falseID      uuid.UUID
+		actualSecret string
+		falseSecret  string
 	}
 
 	cases := []TestCase{
 		{
-			testName: "Mismatching userID",
-			actualID: trueID,
-			falseID:  uuid.New(),
-			actualSecret:  trueSecret,
-			falseSecret: trueSecret,
+			testName:     "Mismatching userID",
+			actualID:     trueID,
+			falseID:      uuid.New(),
+			actualSecret: trueSecret,
+			falseSecret:  trueSecret,
 		},
 		{
-			testName: "Empty Secret",
-			actualID: trueID,
-			falseID:  uuid.New(),
-			actualSecret:   "",
-			falseSecret:   "",
+			testName:     "Empty Secret",
+			actualID:     trueID,
+			falseID:      uuid.New(),
+			actualSecret: "",
+			falseSecret:  "",
 		},
 		{
-			testName: "Mismatching Secret",
-			actualID: trueID,
-			falseID:  trueID,
-			actualSecret:  trueSecret, 
-			falseSecret:   "yprihc",
+			testName:     "Mismatching Secret",
+			actualID:     trueID,
+			falseID:      trueID,
+			actualSecret: trueSecret,
+			falseSecret:  "yprihc",
 		},
 	}
 
@@ -99,6 +100,75 @@ func TestInvalidJWT(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetBearerToken(t *testing.T) {
+	type TestCase struct {
+		name        string
+		input       string
+		expected    string
+		errExpected bool
+	}
+
+	testCases := []TestCase{
+		{
+			name:        "Default Case",
+			input:       "Bearer <user_token>",
+			expected:    "<user_token>",
+			errExpected: false,
+		},
+		{
+			name:        "Improper Case",
+			input:       "bearer <user_token>",
+			expected:    "",
+			errExpected: true,
+		},
+		{
+			name:        "Preceding Whitespace Case",
+			input:       " Bearer <user_token>",
+			expected:    "",
+			errExpected: true,
+		},
+		{
+			name:        "Inbetween Whitespace Case",
+			input:       "Bearer  <user_token>",
+			expected:    " <user_token>",
+			errExpected: false,
+		},
+		{
+			name:        "Trailing Whitespace Case",
+			input:       "Bearer <user_token> ",
+			expected:    "<user_token> ",
+			errExpected: false,
+		},
+		{
+			name:        "Invalid scheme Case",
+			input:       "Basic <user_token>",
+			expected:    "",
+			errExpected: true,
+		},
+		{
+			name:        "Empty Token Case",
+			input:       "Bearer ",
+			expected:    "",
+			errExpected: false,
+		},
+	}
+
+	for _, c := range testCases {
+		t.Run(c.name, func(t *testing.T) {
+			inputHeader := http.Header{}
+			inputHeader.Set("Authorization", c.input)
+			token, err := GetBearerToken(inputHeader)
+			if (err != nil) != c.errExpected {
+				log.Fatalf("Error while extracting the token: %s", err)
+			}
+			if token != c.expected {
+				log.Fatalf("Token Mismatch: Expected : %s, Got: %s.", c.expected, token)
+			}
+		})
+	}
+
 }
 
 // Will be implemented in the future

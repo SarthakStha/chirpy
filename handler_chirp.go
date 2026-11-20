@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"github.com/SarthakStha/chirpy/internal/auth"
 	"github.com/SarthakStha/chirpy/internal/database"
 	"github.com/google/uuid"
 	"net/http"
@@ -19,13 +20,21 @@ type Chirp struct {
 }
 
 func (cfg *apiConfig) handlerNewChirp(w http.ResponseWriter, r *http.Request) {
-	// probably better to use a anonymous struct here
-	type requestBody struct {
-		Body   string    `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+	authHeader, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Missing/Invalid Auth Credential", err)
+		return
 	}
 
-	requestParams := requestBody{}
+	userID, err := auth.ValidateJWT(authHeader, cfg.secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized User", errors.New("Invalid JWT"))
+		return
+	}
+
+	requestParams := struct {
+		Body string `json:"body"`
+	}{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&requestParams); err != nil {
 		respondWithError(w, http.StatusBadRequest, "Could not decode request body", err)
@@ -39,7 +48,7 @@ func (cfg *apiConfig) handlerNewChirp(w http.ResponseWriter, r *http.Request) {
 
 	chirpArgs := database.CreateChirpParams{
 		Body:   cleanedChirp,
-		UserID: requestParams.UserID,
+		UserID: userID,
 	}
 	chirp, err := cfg.db.CreateChirp(r.Context(), chirpArgs)
 	if err != nil {
