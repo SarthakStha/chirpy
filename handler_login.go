@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/SarthakStha/chirpy/internal/auth"
+	"github.com/SarthakStha/chirpy/internal/database"
 	"github.com/google/uuid"
 	"net/http"
 	"time"
@@ -10,9 +11,8 @@ import (
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type params struct {
-		Password  string        `json:"password"`
-		Email     string        `json:"email"`
-		ExpiresIn time.Duration `json:"expires_in_seconds"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 
 	requestParams := params{}
@@ -34,28 +34,42 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If no expiration duration is provided use default 1 hour
-	expirationTime := time.Hour * 1
-	if requestParams.ExpiresIn != 0 {
-		expirationTime = requestParams.ExpiresIn * time.Second
-	}
-	tokenString, err := auth.MakeJWT(user.ID, cfg.secret, expirationTime)
+	// Default JWT duration is 1 hour.
+	JWTDuration := time.Hour * 1
+	tokenString, err := auth.MakeJWT(user.ID, cfg.secret, JWTDuration)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Unable to create a JWT for the user", err)
+		return
+	}
+
+	// Default refresh token duration is 60 days.
+	refreshTokenDuration := time.Hour * 24 * 60
+	refreshToken := auth.MakeRefreshToken()
+	refreshTokenParams := database.CreateRefreshTokenParams{
+		Token:  refreshToken,
+		UserID: user.ID,
+		ExpiresAt: time.Now().UTC().Add(refreshTokenDuration),
+	}
+	_, err = cfg.db.CreateRefreshToken(r.Context(), refreshTokenParams)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to store new refresh token", err)
+		return
 	}
 
 	responseJSON := struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Email     string    `json:"email"`
-		Token     string    `json:"token"`
+		ID           uuid.UUID `json:"id"`
+		CreatedAt    time.Time `json:"created_at"`
+		UpdatedAt    time.Time `json:"updated_at"`
+		Email        string    `json:"email"`
+		Token        string    `json:"token"`
+		RefreshToken string    `json:"refresh_token"`
 	}{
-		ID:        user.ID,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
-		Token:     tokenString,
+		ID:           user.ID,
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
+		Email:        user.Email,
+		Token:        tokenString,
+		RefreshToken: refreshToken,
 	}
 	respondWithJSON(w, http.StatusOK, responseJSON)
 }
