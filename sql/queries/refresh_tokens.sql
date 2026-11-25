@@ -9,3 +9,15 @@ VALUES (
 	NULL
 )
 RETURNING *;
+
+-- name: GetRefreshTokenEntry :one
+SELECT *
+FROM refresh_tokens
+WHERE token = $1;
+
+-- name: RevokeRefreshToken :one
+UPDATE refresh_tokens
+SET updated_at = NOW(), revoked_at = NOW()
+WHERE token = $1
+AND revoked_at = NULL
+RETURNING *;

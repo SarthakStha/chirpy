@@ -46,8 +46,8 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	refreshTokenDuration := time.Hour * 24 * 60
 	refreshToken := auth.MakeRefreshToken()
 	refreshTokenParams := database.CreateRefreshTokenParams{
-		Token:  refreshToken,
-		UserID: user.ID,
+		Token:     refreshToken,
+		UserID:    user.ID,
 		ExpiresAt: time.Now().UTC().Add(refreshTokenDuration),
 	}
 	_, err = cfg.db.CreateRefreshToken(r.Context(), refreshTokenParams)
