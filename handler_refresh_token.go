@@ -66,7 +66,7 @@ func (cfg *apiConfig) handlerRevokeRefreshToken(w http.ResponseWriter, r *http.R
 	}
 
 	// Will only update entries that are not already revoked i.e. revoked_at is NULL
-	_, err = cfg.db.RevokeRefreshToken(r.Context(), token)
+	err = cfg.db.RevokeRefreshToken(r.Context(), token)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		respondWithError(w, http.StatusInternalServerError, "Unable to revoke the token", err)
 		return

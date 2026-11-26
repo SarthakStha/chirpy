@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"github.com/SarthakStha/chirpy/internal/auth"
@@ -134,4 +135,57 @@ func (cfg *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
 		UserID:    chirp.UserID,
 	}
 	respondWithJSON(w, http.StatusOK, responseChirp)
+}
+
+// Attempts to delete the chirp provided in the request path.
+// Gets the user_id from the Authorization header.
+// Verifies if the user owns the chirps, if yes deletes it.
+// Return Status Codes:
+// 204 if everything is successfull, the chirp is deleted from the database.
+// 400 unable to parse the chip_id from the request path.
+// 401 invalid/missing Auth header.
+// 403 attempting to delete other user's chirp.
+// 404 chirp not found in the database.
+// 500 unexpected database error.
+func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request) {
+	authToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(authToken, cfg.secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
+		return
+	}
+
+	chirpID, err := uuid.Parse(r.PathValue("chirpID"))
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Bad Request", err)
+		return
+	}
+
+	chirpEntry, err := cfg.db.GetChirp(r.Context(), chirpID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "Not Found", err)
+			return
+		}
+		respondWithError(w, http.StatusInternalServerError, "Internal Server Error", err)
+		return
+	}
+
+	if chirpEntry.UserID != userID {
+		respondWithError(w, http.StatusForbidden, "Unauthorized", err)
+		return
+	}
+
+	err = cfg.db.DeleteChirp(r.Context(), chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Internal Server Error", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
