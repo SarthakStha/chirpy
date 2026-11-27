@@ -8,6 +8,7 @@ import (
 	"github.com/SarthakStha/chirpy/internal/database"
 	"github.com/google/uuid"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 )
@@ -92,15 +93,44 @@ func cleanChirp(body string, profaneWords map[string]struct{}) string {
 	return cleanedBody
 }
 
+// Returns all the chirps in the database.
+// Takes an optional query parameter author_id, which if provided
+// will filter the results for that user.
+// Takes an optional query parameter order, sorts by the created date,
+// order in ascending by default, sorts in descending order if order=DESC.
+// Return Status Codes:
+// 200 if no issues.
+// 401 if unable parse/invalid user_id.
+// 500 if unexpected database issues.
 func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request) {
-	allChirps, err := cfg.db.GetAllChirps(r.Context())
+	queryUser := "author_id"
+	userIDString := r.URL.Query().Get(queryUser)
+
+	var queriedChirps []database.Chirp
+	var err error
+
+	// If the query parameter is provided will filter on the user provided.
+	if userIDString != "" {
+		userID, err := uuid.Parse(userIDString)
+		if err != nil {
+			respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
+		}
+		queriedChirps, err = cfg.db.GetUserChirps(r.Context(), userID)
+	} else {
+		// else all chirps
+		queriedChirps, err = cfg.db.GetAllChirps(r.Context())
+	}
+
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Unable to get chirps", err)
 		return
 	}
 
-	responseChirps := make([]Chirp, len(allChirps))
-	for i, chirp := range allChirps {
+	querySortOrder := "sort"
+	order := r.URL.Query().Get(querySortOrder)
+
+	responseChirps := make([]Chirp, len(queriedChirps))
+	for i, chirp := range queriedChirps {
 		responseChirps[i] = Chirp{
 			ID:        chirp.ID,
 			CreatedAt: chirp.CreatedAt,
@@ -109,6 +139,20 @@ func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request
 			UserID:    chirp.UserID,
 		}
 	}
+
+	// This works but it is better to do this explicitly
+	// Queried Chirps are already sorted by ASC by default
+	// Reverse the order if order is DESC
+	//if order == "desc" {
+	//	slices.Reverse(responseChirps)
+	//}
+	sort.SliceStable(responseChirps, func(i, j int) bool {
+		if order == "desc" {
+			return responseChirps[i].CreatedAt.After(responseChirps[j].CreatedAt)
+		} else {
+			return responseChirps[i].CreatedAt.Before(responseChirps[j].CreatedAt)
+		}
+	})
 
 	respondWithJSON(w, http.StatusOK, responseChirps)
 }
