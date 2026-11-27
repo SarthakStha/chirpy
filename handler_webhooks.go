@@ -34,7 +34,7 @@ func (cfg *apiConfig) handlerPremiumUser(w http.ResponseWriter, r *http.Request)
 	requestParams := struct {
 		Event string `json:"event"`
 		Data  struct {
-			UserID string `json:"user_id"`
+			UserID uuid.UUID `json:"user_id"`
 		} `json:"data"`
 	}{}
 
@@ -49,15 +49,7 @@ func (cfg *apiConfig) handlerPremiumUser(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Decoder can be used to directly parse into UUID, worth looking into the behaviour of
-	// Unmarshall on non primitive types.
-	userID, err := uuid.Parse(requestParams.Data.UserID)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Bad Request", err)
-		return
-	}
-
-	if err := cfg.db.AddPremium(r.Context(), userID); err != nil {
+	if err := cfg.db.AddPremium(r.Context(), requestParams.Data.UserID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNotFound)
 			return
