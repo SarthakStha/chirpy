@@ -61,14 +61,14 @@ func (cfg *apiConfig) handlerRefreshJWT(w http.ResponseWriter, r *http.Request) 
 func (cfg *apiConfig) handlerRevokeRefreshToken(w http.ResponseWriter, r *http.Request) {
 	token, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Missing/Invalid Auth Credential", err)
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
 		return
 	}
 
 	// Will only update entries that are not already revoked i.e. revoked_at is NULL
 	err = cfg.db.RevokeRefreshToken(r.Context(), token)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		respondWithError(w, http.StatusInternalServerError, "Unable to revoke the token", err)
+		respondWithError(w, http.StatusInternalServerError, "Internal Server Error", err)
 		return
 	}
 

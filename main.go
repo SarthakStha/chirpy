@@ -37,6 +37,11 @@ func main() {
 		log.Fatal("token secret must be set")
 	}
 
+	polkaKey := os.Getenv("POLKA_KEY")
+	if polkaKey == "" {
+		log.Fatal("missing API key")
+	}
+
 	// Connecting to the database
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -50,6 +55,7 @@ func main() {
 		db:       dbQueries,
 		platform: platform,
 		secret:   tokenSecret,
+		polkaKey: polkaKey,
 	}
 
 	mux.Handle("/app/", cfg.middlewareMetricInc(http.StripPrefix("/app", fileServer)))
@@ -63,6 +69,7 @@ func main() {
 	mux.HandleFunc("POST /api/revoke", cfg.handlerRevokeRefreshToken)
 
 	mux.HandleFunc("POST /api/login", cfg.handlerLogin)
+	mux.HandleFunc("POST /api/polka/webhooks", cfg.handlerPremiumUser)
 
 	mux.HandleFunc("POST /api/users", cfg.handlerNewUser)
 	mux.HandleFunc("PUT /api/users", cfg.handlerUpdateUser)
